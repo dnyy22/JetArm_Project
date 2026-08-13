@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+    <arg name="camera_type" default="$(optenv CAMERA_TYPE USB_CAM)"/>
+
+    <param name="robot_description"
+           command="$(find xacro)/xacro '$(find jetarm_6dof_description)/urdf/jetarm_6dof_robot.urdf.xacro' camera_type:=$(arg camera_type)"/>
+
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen"/>
+</launch>

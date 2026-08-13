@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+    <node name="rviz_jetarm_6dof" pkg="rviz" type="rviz" output="screen"
+          args="-d $(find jetarm_6dof_description)/rviz/jetarm.rviz"/>
+</launch>

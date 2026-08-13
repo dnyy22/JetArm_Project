@@ -13,11 +13,17 @@ from rclpy.node import Node
 from kinematics.kinematics_control import set_pose_target
 from kinematics_msgs.srv import GetRobotPose, SetRobotPose
 from servo_controller_msgs.msg import ServoPosition, ServosPosition, ServoStateList
+from tool_frame_adapter import (
+    ToolFrameAdapter,
+    URDF_SOLDER_TIP_IN_GRIPPER_M,
+    VENDOR_LEGACY_TCP_IN_GRIPPER_M,
+)
 
 
 class SafeWaypointExecutor(Node):
-    def __init__(self) -> None:
+    def __init__(self, tool_frames: ToolFrameAdapter) -> None:
         super().__init__("welding_safe_waypoint_executor")
+        self.tool_frames = tool_frames
         self.ik_client = self.create_client(
             SetRobotPose, "/kinematics/set_pose_target"
         )
@@ -46,8 +52,9 @@ class SafeWaypointExecutor(Node):
     ) -> list[int]:
         if not self.ik_client.wait_for_service(timeout_sec=8.0):
             raise RuntimeError("IK service unavailable: /kinematics/set_pose_target")
+        legacy_xyz = self.tool_frames.tip_to_legacy(xyz, pitch)
         request = set_pose_target(
-            xyz, pitch, pitch_range=pitch_range, resolution=1.0
+            legacy_xyz, pitch, pitch_range=pitch_range, resolution=1.0
         )
         future = self.ik_client.call_async(request)
         rclpy.spin_until_future_complete(self, future, timeout_sec=8.0)
@@ -55,7 +62,7 @@ class SafeWaypointExecutor(Node):
             raise RuntimeError("IK service call failed")
         response = future.result()
         if response is None or not response.success:
-            raise RuntimeError(f"No IK solution for xyz={xyz}")
+            raise RuntimeError(f"No IK solution for tip_xyz={xyz}; legacy_tcp_xyz={legacy_xyz}")
         return [int(value) for value in response.pulse]
 
     def solve_smooth(
@@ -76,8 +83,9 @@ class SafeWaypointExecutor(Node):
             raise RuntimeError(
                 "Smooth IK service unavailable: /kinematics/set_pose_target_smooth"
             )
+        legacy_xyz = self.tool_frames.tip_to_legacy(xyz, pitch)
         request = set_pose_target(
-            xyz, pitch, pitch_range=pitch_range, resolution=1.0,
+            legacy_xyz, pitch, pitch_range=pitch_range, resolution=1.0,
             duration=float(duration),
         )
         future = self.smooth_ik_client.call_async(request)
@@ -87,7 +95,7 @@ class SafeWaypointExecutor(Node):
         response = future.result()
         raw_pulses = [] if response is None else list(response.pulse)
         if response is None or not response.success or not raw_pulses:
-            raise RuntimeError(f"No smooth IK solution for xyz={xyz}")
+            raise RuntimeError(f"No smooth IK solution for tip_xyz={xyz}; legacy_tcp_xyz={legacy_xyz}")
         if len(raw_pulses) % 5:
             raise RuntimeError(
                 f"Smooth IK returned {len(raw_pulses)} pulses, not whole 5-axis frames"
@@ -109,7 +117,10 @@ class SafeWaypointExecutor(Node):
         q = pose.orientation
         value = max(-1.0, min(1.0, 2.0 * (q.w * q.y - q.z * q.x)))
         pitch = math.degrees(math.asin(value))
-        return [pose.position.x, pose.position.y, pose.position.z], pitch
+        # The service reports the compiled solver's old TCP, not the solder tip.
+        return self.tool_frames.legacy_to_tip(
+            [pose.position.x, pose.position.y, pose.position.z], pitch
+        ), pitch
 
     def publish_pulses(self, pulses: list[int], duration: float) -> None:
         if len(pulses) < 5:
@@ -247,7 +258,37 @@ def main() -> int:
     parser.add_argument("--transition-pause", type=float, default=0.2)
     parser.add_argument("--initial-lift-mm", type=float, default=30.0)
     parser.add_argument("--lift-step-mm", type=float, default=5.0)
+    parser.add_argument(
+        "--legacy-tcp-gripper-xyz", nargs=3, type=float,
+        default=VENDOR_LEGACY_TCP_IN_GRIPPER_M,
+        metavar=("X", "Y", "Z"),
+        help=("Old .so IK TCP origin in gripper_servo_link (m). Defaults to the "
+              "vendor link3 + tool_link = 0.16645583202 m; override if calibrated."),
+    )
+    parser.add_argument(
+        "--solder-tip-gripper-xyz", nargs=3, type=float,
+        default=URDF_SOLDER_TIP_IN_GRIPPER_M, metavar=("X", "Y", "Z"),
+        help="Solder-tip origin in gripper_servo_link (m); defaults to current URDF.",
+    )
+    parser.add_argument(
+        "--confirm-tool-transform", action="store_true",
+        help="Required with --execute after physically verifying the TCP transform.",
+    )
     args = parser.parse_args()
+
+    tool_frames = ToolFrameAdapter(
+        tuple(args.legacy_tcp_gripper_xyz), tuple(args.solder_tip_gripper_xyz)
+    )
+    print(
+        "Tool transform (legacy TCP -> solder tip, in legacy local axes): "
+        f"{tool_frames.legacy_to_tip_m} m",
+        flush=True,
+    )
+    if args.execute and not args.confirm_tool_transform:
+        raise SystemExit(
+            "Refusing physical motion without --confirm-tool-transform. Run plan-only "
+            "first and verify the solder tip at a known point."
+        )
 
     with args.csv.expanduser().open("r", newline="", encoding="utf-8-sig") as file:
         rows = list(csv.DictReader(file))
@@ -256,7 +297,7 @@ def main() -> int:
     selected = rows if args.all else [rows[args.point]]
 
     rclpy.init()
-    node = SafeWaypointExecutor()
+    node = SafeWaypointExecutor(tool_frames)
     try:
         pitch_range = [
             args.pitch - abs(args.pitch_range),

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="jetarm_6dof">
+    <xacro:arg name="prefix" default=""/>
+    <xacro:arg name="camera_type" default="GEMINI"/>
+    <xacro:property name="camera_type"        value="$(env CAMERA_TYPE)"/>
+
+    <!-- Import jetarm macro -->
+    <xacro:include filename="$(find jetarm_6dof_description)/urdf/jetarm_6dof_description.urdf.xacro"/>
+
+    <xacro:include filename="$(find jetarm_6dof_description)/urdf/arm.urdf.xacro"/>
+    <xacro:include filename="$(find jetarm_6dof_description)/urdf/connect.urdf.xacro"/>
+    <!-- 停用原本左右夾爪 -->
+    <!--
+    <xacro:include filename="$(find jetarm_6dof_description)/urdf/gripper.urdf.xacro"/>
+    -->
+
+    <!-- 載入焊槍工具 -->
+    <xacro:include filename="$(find jetarm_6dof_description)/urdf/soldering_tool.urdf.xacro"/>
+
+<xacro:if value="${camera_type == 'GEMINI'}">
+    <xacro:include filename="$(find jetarm_6dof_description)/urdf/depth_camera.urdf.xacro"/>
+    <xacro:include filename="$(find robot_gazebo)/urdf/camera.gazebo.xacro"/>
+</xacro:if>
+    
+    <xacro:if value="${camera_type == 'USB_CAM'}">
+    	<xacro:include filename="$(find jetarm_6dof_description)/urdf/usb_cam.urdf.xacro"/>
+    </xacro:if>
+
+    <!-- Import Rviz colors -->
+    <xacro:include filename="$(find jetarm_6dof_description)/urdf/materials.xacro"/>
+
+    <!-- Import jetarm ros_control description -->
+    <xacro:include filename="$(find jetarm_6dof_description)/gazebo/jetarm.gazebo.xacro" /> 
+    <xacro:include filename="$(find jetarm_6dof_description)/gazebo/jetarm.transmission.xacro" /> 
+
+    <!-- Used for fixing robot -->
+    <link name="$(arg prefix)world"/>
+    <gazebo reference="$(arg prefix)world">
+        <static>true</static>
+    </gazebo>
+
+    <xacro:jetarm_6dof parent="$(arg prefix)world" prefix="$(arg prefix)" camera_type="$(arg camera_type)">
+    	<origin xyz="0 0 0" rpy="0 0 0"/> 
+    </xacro:jetarm_6dof>
+
+    <xacro:jetarm_gazebo prefix="$(arg prefix)"></xacro:jetarm_gazebo> 
+    <xacro:jetarm_gazeboo_transmission prefix="$(arg prefix)"></xacro:jetarm_gazeboo_transmission> 
+    <!-- <xacro:jetarm_ros2_control name="jetarm" prefix="$(arg prefix)" /> -->
+</robot>
+

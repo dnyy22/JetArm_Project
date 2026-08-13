@@ -1,0 +1,108 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!--
+    焊槍工具總成
+    五個 STL 使用相同的 SolidWorks 輸出座標系，
+    因此 visual origin 暫時都設定為 0。
+  -->
+  <link name="soldering_tool_link">
+
+    <!-- 上殼 -->
+    <visual name="upper_shell_visual">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh
+          filename="file://$(find jetarm_6dof_description)/meshes/soldering_tool/upper_shell.stl"
+          scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="upper_shell_material">
+        <color rgba="0.55 0.58 0.68 1.0"/>
+      </material>
+    </visual>
+
+    <!-- 下殼 -->
+    <visual name="lower_shell_visual">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh
+          filename="file://$(find jetarm_6dof_description)/meshes/soldering_tool/lower_shell.stl"
+          scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="lower_shell_material">
+        <color rgba="0.45 0.48 0.58 1.0"/>
+      </material>
+    </visual>
+
+    <!-- 送料齒輪：目前固定不旋轉 -->
+    <visual name="feed_gear_visual">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh
+          filename="file://$(find jetarm_6dof_description)/meshes/soldering_tool/feed_gear.stl"
+          scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="feed_gear_material">
+        <color rgba="0.80 0.72 0.58 1.0"/>
+      </material>
+    </visual>
+
+    <!-- 焊槍 -->
+    <visual name="soldering_iron_visual">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh
+          filename="file://$(find jetarm_6dof_description)/meshes/soldering_tool/soldering_iron.stl"
+          scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="soldering_iron_material">
+        <color rgba="0.55 0.55 0.58 1.0"/>
+      </material>
+    </visual>
+
+    <!-- 導管 -->
+    <visual name="guide_tube_visual">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh
+          filename="file://$(find jetarm_6dof_description)/meshes/soldering_tool/guide_tube.stl"
+          scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="guide_tube_material">
+        <color rgba="0.72 0.72 0.75 1.0"/>
+      </material>
+    </visual>
+
+  </link>
+
+  <!-- 將新工具固定在原廠馬達上 -->
+  <joint name="soldering_tool_fixed_joint" type="fixed">
+    <origin xyz="-0.0014 0 0.0585" rpy="1.5708 -1.5708 0"/>
+    <parent link="gripper_servo_link"/>
+    <child link="soldering_tool_link"/>
+  </joint>
+
+  <!-- 焊槍尖端座標系 -->
+  <!-- 現在先放在工具原點，確認模型後再移到真正尖端 -->
+  <link name="end_effector_link">
+
+    <!-- 暫時使用紅球顯示 end-effector 位置 -->
+    <visual name="end_effector_marker">
+      <geometry>
+        <sphere radius="0.00004"/>
+      </geometry>
+      <material name="end_effector_red">
+        <color rgba="1.0 0.0 0.0 1.0"/>
+      </material>
+    </visual>
+
+  </link>
+
+  <joint name="end_effector_joint" type="fixed">
+    <origin xyz="0.10325 0 0" rpy="0 0 0"/>
+    <parent link="soldering_tool_link"/>
+    <child link="end_effector_link"/>
+  </joint>
+
+</robot>
+

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+    <xacro:macro name="gazebo_link" params="name">
+        <gazebo reference="${name}">
+            <kp>0</kp>
+            <kd>0</kd>
+            <mu1>1</mu1>
+            <mu2>1</mu2>
+            <minDepth>0.000</minDepth>
+            <material>Gazebo/Grass</material>
+        </gazebo>
+    </xacro:macro>
+
+    <xacro:macro name="gazebo_black" params="name">
+        <gazebo reference="${name}">
+		<material>Gazebo/Black</material>
+	</gazebo>
+    </xacro:macro>
+
+    <xacro:macro name="gazebo_gripper" params="name">
+        <gazebo reference="${name}">
+            <kp>1e15</kp>
+            <kd>1e13</kd>
+            <mu1>1.0</mu1>
+            <mu2>1.0</mu2>
+            <minDepth>0.0002</minDepth>
+		<material>Gazebo/Black</material>
+        </gazebo>
+    </xacro:macro>
+
+    <xacro:macro name="jetarm_gazebo" params="prefix">
+        <!-- ros_control plugin -->
+        <!-- <gazebo>
+            <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+                <robotNamespace>/jetarm</robotNamespace>
+                <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+                <legacyModeNS>true</legacyModeNS>
+            </plugin>
+        </gazebo> -->
+
+        <xacro:gazebo_link name="${prefix}link1"/>
+        <xacro:gazebo_link name="${prefix}link2"/>
+        <xacro:gazebo_link name="${prefix}link3"/>
+        <xacro:gazebo_link name="${prefix}link4"/>
+        <xacro:gazebo_link name="${prefix}link5"/>
+        <xacro:gazebo_gripper name="${prefix}r_link"/>
+        <xacro:gazebo_black name="${prefix}l_link"/>
+        <xacro:gazebo_black name="${prefix}l_in_link"/>
+        <xacro:gazebo_black name="${prefix}l_out_link"/>
+        <xacro:gazebo_black name="${prefix}r_in_link"/>
+        <xacro:gazebo_black name="${prefix}r_out_link"/>
+        <xacro:gazebo_black name="${prefix}base_link"/>
+        <xacro:gazebo_black name="${prefix}gripper_servo_link"/>
+    </xacro:macro>
+</robot>
+

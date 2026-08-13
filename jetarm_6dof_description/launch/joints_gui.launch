@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+    <node name="joint_state_publisher_gui" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui">
+        <!-- <remap from="joint_states" to="/jetarm/joint_states" /> -->
+    </node>
+</launch>
